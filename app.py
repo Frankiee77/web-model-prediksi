@@ -11,6 +11,7 @@ from matplotlib.gridspec import GridSpec
 # ==========================================
 st.set_page_config(
     page_title="Prediksi DBD Sukabumi",
+    page_icon="🦟",
     layout="wide"
 )
 
@@ -452,18 +453,28 @@ with col_result:
         # 6. PROSES PREDIKSI
         # ==========================================
 
-        # --- Susun array input: [Kasus, Suhu, Kelembaban, Kepadatan] ---
-        # Urutan sesuai scaler_features (data_min_: [0, 22.31, 77.07, 6995])
-        input_data = np.array([
-            [kasus_1, suhu_1, lembab_1, padat_1],
-            [kasus_2, suhu_2, lembab_2, padat_2],
-            [kasus_3, suhu_3, lembab_3, padat_3]
-        ])  # shape: (3, 4)
+        # --- Susun array input 5 fitur ---
+        # scaler_features → 4 variabel input: [Curah_Hujan, Suhu, Kelembaban, Kepadatan]
+        # scaler_target   → Kasus_DBD (dipakai juga sebagai fitur lag pada LSTM)
+        # Urutan akhir ke LSTM: [Kasus_scaled, Hujan_scaled, Suhu_scaled, Lembab_scaled, Padat_scaled]
 
-        input_scaled = scaler_features.transform(input_data)  # (3, 4), skala 0-1
+        # Scale kasus menggunakan scaler_target
+        kasus_arr = np.array([[kasus_1], [kasus_2], [kasus_3]])  # (3, 1)
+        kasus_scaled = scaler_target.transform(kasus_arr)         # (3, 1)
+
+        # Scale 4 variabel input menggunakan scaler_features
+        input_data_4f = np.array([
+            [hujan_1, suhu_1, lembab_1, padat_1],
+            [hujan_2, suhu_2, lembab_2, padat_2],
+            [hujan_3, suhu_3, lembab_3, padat_3]
+        ])  # shape: (3, 4)
+        input_scaled_4f = scaler_features.transform(input_data_4f)  # (3, 4)
+
+        # Gabungkan: kolom kasus + 4 fitur → (3, 5)
+        input_scaled = np.hstack([kasus_scaled, input_scaled_4f])
 
         # ---- Prediksi LSTM ----
-        input_lstm = input_scaled.reshape((1, 3, 4))  # (1 sampel, 3 time-steps, 4 fitur)
+        input_lstm = input_scaled.reshape((1, 3, 5))  # (1 sampel, 3 time-steps, 5 fitur)
         pred_lstm_scaled = model_lstm.predict(input_lstm, verbose=0)
         pred_lstm_actual = scaler_target.inverse_transform(pred_lstm_scaled)
         hasil_lstm = max(0, int(np.round(pred_lstm_actual[0][0])))
