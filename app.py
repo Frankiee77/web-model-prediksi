@@ -453,24 +453,49 @@ with col_result:
         # 6. PROSES PREDIKSI
         # ==========================================
 
-        # --- Susun array input 5 fitur ---
-        # scaler_features → 4 variabel input: [Curah_Hujan, Suhu, Kelembaban, Kepadatan]
-        # scaler_target   → Kasus_DBD (dipakai juga sebagai fitur lag pada LSTM)
-        # Urutan akhir ke LSTM: [Kasus_scaled, Hujan_scaled, Suhu_scaled, Lembab_scaled, Padat_scaled]
+        # --- Ambil batas range training dari scaler_features ---
+        # [curah_hujan, suhu, kelembaban, kepadatan]
+        # data_min_: [0, 22.31, 77.07, 6995]
+        # data_max_: [2740, 25.45, 91.44, 7820]
+        feat_min = scaler_features.data_min_   # shape (4,)
+        feat_max = scaler_features.data_max_   # shape (4,)
 
-        # Scale kasus menggunakan scaler_target
-        kasus_arr = np.array([[kasus_1], [kasus_2], [kasus_3]])  # (3, 1)
-        kasus_scaled = scaler_target.transform(kasus_arr)         # (3, 1)
+        # Clip input ke range training agar hasil scale tetap 0–1
+        # (input di luar range menyebabkan ekstrapolasi → prediksi meledak)
+        def clip_features(h, s, l, p):
+            arr = np.array([h, s, l, p])
+            return np.clip(arr, feat_min, feat_max)
 
-        # Scale 4 variabel input menggunakan scaler_features
-        input_data_4f = np.array([
+        raw_t3 = clip_features(hujan_1, suhu_1, lembab_1, padat_1)
+        raw_t2 = clip_features(hujan_2, suhu_2, lembab_2, padat_2)
+        raw_t1 = clip_features(hujan_3, suhu_3, lembab_3, padat_3)
+
+        # Peringatan jika ada nilai di luar range training
+        input_raw = np.array([
             [hujan_1, suhu_1, lembab_1, padat_1],
             [hujan_2, suhu_2, lembab_2, padat_2],
             [hujan_3, suhu_3, lembab_3, padat_3]
-        ])  # shape: (3, 4)
-        input_scaled_4f = scaler_features.transform(input_data_4f)  # (3, 4)
+        ])
+        out_of_range = np.any(input_raw < feat_min, axis=0) | np.any(input_raw > feat_max, axis=0)
+        col_names = ['Curah Hujan', 'Suhu', 'Kelembaban', 'Kepadatan']
+        oor_cols = [col_names[i] for i in range(4) if out_of_range[i]]
+        if oor_cols:
+            range_info = ', '.join([f'{col_names[i]} ({feat_min[i]:.1f}–{feat_max[i]:.1f})' 
+                                    for i in range(4) if out_of_range[i]])
+            st.warning(f"⚠️ **Input di luar rentang data training** untuk: **{', '.join(oor_cols)}**. "
+                       f"Nilai akan di-clip ke rentang training: {range_info}. "
+                       f"Hasil prediksi tetap valid namun kurang akurat untuk kondisi ekstrem.")
 
-        # Gabungkan: kolom kasus + 4 fitur → (3, 5)
+        # --- Scale variabel input (4 fitur) ---
+        input_data_4f = np.array([raw_t3, raw_t2, raw_t1])  # (3, 4) sudah di-clip
+        input_scaled_4f = scaler_features.transform(input_data_4f)  # (3, 4), range 0–1
+
+        # --- Scale kasus historis via scaler_target (untuk lag LSTM) ---
+        kasus_arr = np.array([[kasus_1], [kasus_2], [kasus_3]])
+        kasus_clipped = np.clip(kasus_arr, scaler_target.data_min_, scaler_target.data_max_)
+        kasus_scaled = scaler_target.transform(kasus_clipped)  # (3, 1)
+
+        # --- Gabungkan untuk LSTM: [Kasus | Hujan, Suhu, Lembab, Padat] → (3, 5) ---
         input_scaled = np.hstack([kasus_scaled, input_scaled_4f])
 
         # ---- Prediksi LSTM ----
@@ -480,19 +505,18 @@ with col_result:
         hasil_lstm = max(0, int(np.round(pred_lstm_actual[0][0])))
 
         # ---- Prediksi SARIMAX ----
-        # SARIMAX menggunakan exog variables dari bulan terakhir (t-1) untuk forecast 1 langkah
-        # Exog: [Curah Hujan, Suhu, Kelembaban, Kepadatan] sesuai training
-        exog_next = np.array([[hujan_3, suhu_3, lembab_3, padat_3]])
+        # SARIMAX dilatih dengan exog yang SUDAH di-scale (0–1), bukan nilai mentah
+        # Gunakan input_scaled_4f baris terakhir (t-1) sebagai exog untuk forecast t+1
+        exog_next_scaled = input_scaled_4f[[-1], :]  # shape (1, 4) — sudah scaled 0–1
         try:
-            pred_sarimax_result = model_sarimax.forecast(steps=1, exog=exog_next)
+            pred_sarimax_result = model_sarimax.forecast(steps=1, exog=exog_next_scaled)
             hasil_sarimax = max(0, int(np.round(float(pred_sarimax_result.iloc[0]))))
         except Exception as e:
-            # Fallback: gunakan get_forecast jika forecast gagal
             try:
-                fc = model_sarimax.get_forecast(steps=1, exog=exog_next)
+                fc = model_sarimax.get_forecast(steps=1, exog=exog_next_scaled)
                 hasil_sarimax = max(0, int(np.round(float(fc.predicted_mean.iloc[0]))))
             except Exception as e2:
-                st.warning(f"SARIMAX forecasting error: {e2}. Menggunakan metode fallback.")
+                st.warning(f"SARIMAX forecasting error: {e2}")
                 hasil_sarimax = max(0, int(np.round(float(model_sarimax.fittedvalues.iloc[-1]))))
 
         # ==========================================
