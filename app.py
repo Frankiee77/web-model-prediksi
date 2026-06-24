@@ -205,7 +205,7 @@ try:
 except Exception as e:
     assets_loaded = False
     st.error(f"❌ Gagal memuat model atau scaler. Pastikan semua file berikut ada di folder yang sama dengan app.py:\n"
-             f"- `model_lstm_dbd.keras`\n- `model_sarimax_dbd.pkl`\n- `scaler_features.pkl`\n- `scaler_target.pkl`\n\nError: {e}")
+             f"- `model_lstm_dbd.keras`\n- `model_sarimax_dbd.pkl`\n- `.pkl`\n- `scaler_target.pkl`\n\nError: {e}")
     st.stop()
 
 
@@ -359,20 +359,19 @@ with col_input:
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            kasus_1 = st.number_input("Kasus DBD", min_value=0, value=25, key="k1",
+            kasus_1 = st.number_input("Kasus DBD", min_value=0, key="k1",
                                       help="Jumlah kasus DBD terkonfirmasi")
         with c2:
-            hujan_1 = st.number_input("Curah Hujan (mm)", min_value=0.0, value=200.0,
-                                      step=10.0, key="h1")
+            hujan_1 = st.number_input("Curah Hujan (mm)", min_value=0.0, key="h1")
         with c3:
             suhu_1 = st.number_input("Suhu (°C)", min_value=15.0, max_value=45.0,
-                                     value=27.0, step=0.1, key="s1")
+                                     step=0.1, key="s1")
         with c4:
             lembab_1 = st.number_input("Kelembaban (%)", min_value=0.0, max_value=100.0,
-                                       value=82.0, step=0.5, key="l1")
+                                       key="l1")
 
         padat_1 = st.number_input("Kepadatan Penduduk (jiwa/km²)",
-                                  min_value=0, value=7500, step=50, key="p1")
+                                  min_value=0, key="p1")
 
     # ---- Bulan t-2 ----
     with st.expander("📅 Bulan t-2", expanded=True):
@@ -384,19 +383,18 @@ with col_input:
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            kasus_2 = st.number_input("Kasus DBD", min_value=0, value=38, key="k2")
+            kasus_2 = st.number_input("Kasus DBD", min_value=0, key="k2")
         with c2:
-            hujan_2 = st.number_input("Curah Hujan (mm)", min_value=0.0, value=280.0,
-                                      step=10.0, key="h2")
+            hujan_2 = st.number_input("Curah Hujan (mm)", min_value=0.0, key="h2")
         with c3:
             suhu_2 = st.number_input("Suhu (°C)", min_value=15.0, max_value=45.0,
-                                     value=27.5, step=0.1, key="s2")
+                                    step=0.1, key="s2")
         with c4:
             lembab_2 = st.number_input("Kelembaban (%)", min_value=0.0, max_value=100.0,
-                                       value=84.0, step=0.5, key="l2")
+                                       key="l2")
 
         padat_2 = st.number_input("Kepadatan Penduduk (jiwa/km²)",
-                                  min_value=0, value=7500, step=50, key="p2")
+                                  min_value=0, key="p2")
 
     # ---- Bulan t-1 ----
     with st.expander("📅 Bulan t-1 (Paling Baru)", expanded=True):
@@ -408,19 +406,16 @@ with col_input:
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            kasus_3 = st.number_input("Kasus DBD", min_value=0, value=55, key="k3")
+            kasus_3 = st.number_input("Kasus DBD", min_value=0, key="k3")
         with c2:
-            hujan_3 = st.number_input("Curah Hujan (mm)", min_value=0.0, value=320.0,
-                                      step=10.0, key="h3")
+            hujan_3 = st.number_input("Curah Hujan (mm)", min_value=0.0, key="h3")
         with c3:
-            suhu_3 = st.number_input("Suhu (°C)", min_value=15.0, max_value=45.0,
-                                     value=27.0, step=0.1, key="s3")
+            suhu_3 = st.number_input("Suhu (°C)", min_value=15.0, max_value=45.0, step=0.1, key="s3")
         with c4:
-            lembab_3 = st.number_input("Kelembaban (%)", min_value=0.0, max_value=100.0,
-                                       value=85.0, step=0.5, key="l3")
+            lembab_3 = st.number_input("Kelembaban (%)", min_value=0.0, max_value=100.0, key="l3")
 
         padat_3 = st.number_input("Kepadatan Penduduk (jiwa/km²)",
-                                  min_value=0, value=7500, step=50, key="p3")
+                                  min_value=0, key="p3")
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
@@ -453,7 +448,7 @@ with col_result:
         # 6. PROSES PREDIKSI
         # ==========================================
 
-        # --- Ambil batas range training dari scaler_features ---
+        # --- Ambil batas range training dari  ---
         # [curah_hujan, suhu, kelembaban, kepadatan]
         # data_min_: [0, 22.31, 77.07, 6995]
         # data_max_: [2740, 25.45, 91.44, 7820]
