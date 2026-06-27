@@ -12,8 +12,8 @@ st.markdown("""
 Aplikasi ini dikembangkan untuk memprediksi jumlah kasus
 Demam Berdarah Dengue (DBD) di Kota Sukabumi menggunakan dua model:
 
-- 🧠 Long Short-Term Memory (LSTM)
-- 📈 SARIMAX
+- Long Short-Term Memory (LSTM)
+- Seasonal AutoRegressive Integrated Moving Average with Exogenous Variables (SARIMAX)
 
 Silakan pilih model pada sidebar.
 """)
