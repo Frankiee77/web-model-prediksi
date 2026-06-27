@@ -56,7 +56,11 @@ st.title("📈 Prediksi Kasus DBD Menggunakan SARIMAX")
 st.markdown("""
 Model **Seasonal AutoRegressive Integrated Moving Average with Exogenous Variables (SARIMAX)** digunakan untuk memprediksi jumlah kasus DBD satu bulan ke depan berdasarkan data historis serta variabel eksogen.
 """)
+st.write("Jumlah observasi model:", model.nobs)
 
+st.write("Observasi terakhir model:")
+
+st.write(model.model.endog[-5:])
 st.divider()
 
 c1, c2, c3 = st.columns(3)
