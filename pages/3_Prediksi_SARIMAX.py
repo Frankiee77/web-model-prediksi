@@ -13,8 +13,6 @@ st.set_page_config(
 
 DATASET_PATH = Path("dataset.xlsx")
 
-history["waktu"] = pd.to_datetime(history["waktu"])
-
 EXOG_COLS = [
     "curah_hujan",
     "suhu",
