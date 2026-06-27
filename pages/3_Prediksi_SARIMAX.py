@@ -133,18 +133,18 @@ def plot_prediction(df, pred):
 
     labels = []
 
-   if "waktu" in history.columns:
-
-    history["waktu"] = pd.to_datetime(history["waktu"])
-
-    labels = history["waktu"].dt.strftime("%b\n%Y").tolist()
-
-    next_month = (
-        history["waktu"].iloc[-1] +
-        pd.DateOffset(months=1)
-    ).strftime("%b\n%Y")
-
-    labels.append(next_month)
+    if "waktu" in history.columns:
+        
+        history["waktu"] = pd.to_datetime(history["waktu"])
+    
+        labels = history["waktu"].dt.strftime("%b\n%Y").tolist()
+    
+        next_month = (
+            history["waktu"].iloc[-1] +
+            pd.DateOffset(months=1)
+        ).strftime("%b\n%Y")
+    
+        labels.append(next_month)
 
     else:
 
