@@ -326,6 +326,47 @@ if predict_btn:
         pred = max(pred, 0)
         pred = round(pred)
 
+        st.success("Prediksi berhasil dilakukan.")
+        st.divider()
+        st.subheader("📈 Hasil Prediksi")
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric(
+                label="Prediksi Jumlah Kasus",
+                value=f"{pred} Kasus"
+            )
+        
+        with c2:
+            st.metric(
+                label="Kategori",
+                value=kategori(pred)
+            )
+        st.divider()
+        
+        st.subheader("Ringkasan Input")
+        st.dataframe(
+            input_df,
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        st.info(
+        """
+        **Keterangan**
+        
+        Prediksi dihasilkan menggunakan model **Long Short-Term Memory (LSTM)**
+        dengan panjang window sebanyak **3 bulan**.
+        
+        Model dibangun menggunakan:
+        
+        - 5 variabel
+        - Window Lag = 3
+        - LSTM Units = 8
+        - Optimizer Adam
+        - Huber Loss
+        """
+        )
     except Exception as e:
         st.error("Prediksi gagal.")
         st.exception(e)
@@ -334,44 +375,3 @@ if predict_btn:
 # HASIL PREDIKSI
 # ==========================================================
 
-st.success("Prediksi berhasil dilakukan.")
-st.divider()
-st.subheader("📈 Hasil Prediksi")
-
-c1, c2 = st.columns(2)
-with c1:
-    st.metric(
-        label="Prediksi Jumlah Kasus",
-        value=f"{pred} Kasus"
-    )
-
-with c2:
-    st.metric(
-        label="Kategori",
-        value=kategori(pred)
-    )
-st.divider()
-
-st.subheader("Ringkasan Input")
-st.dataframe(
-    input_df,
-    use_container_width=True,
-    hide_index=True
-)
-
-st.info(
-"""
-**Keterangan**
-
-Prediksi dihasilkan menggunakan model **Long Short-Term Memory (LSTM)**
-dengan panjang window sebanyak **3 bulan**.
-
-Model dibangun menggunakan:
-
-- 5 variabel
-- Window Lag = 3
-- LSTM Units = 8
-- Optimizer Adam
-- Huber Loss
-"""
-)
