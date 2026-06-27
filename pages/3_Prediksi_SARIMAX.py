@@ -1,31 +1,16 @@
-# ==========================================================
-# PREDIKSI DBD KOTA SUKABUMI
-# MODEL SARIMAX
-# ==========================================================
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
-
 from pathlib import Path
 
-# ==========================================================
-# PAGE CONFIG
-# ==========================================================
-
 st.set_page_config(
-    page_title="Prediksi SARIMAX",
+    page_title="Prediksi DBD - SARIMAX",
     page_icon="📈",
     layout="wide"
 )
 
-# ==========================================================
-# PATH
-# ==========================================================
-
 MODEL_PATH = Path("models/sarimax_dbd.pkl")
-
 DATASET_PATH = Path("dataset.xlsx")
 
 EXOG_COLS = [
@@ -35,58 +20,24 @@ EXOG_COLS = [
     "kepadatan"
 ]
 
-# ==========================================================
-# LOAD MODEL
-# ==========================================================
-
 @st.cache_resource
 def load_model():
-
     with open(MODEL_PATH, "rb") as f:
-
         model = pickle.load(f)
-
     return model
-
-
-# ==========================================================
-# LOAD DATASET
-# ==========================================================
 
 @st.cache_data
 def load_dataset():
-
-    df = pd.read_excel(DATASET_PATH)
-
-    if "waktu" in df.columns:
-
-        df["waktu"] = pd.to_datetime(df["waktu"])
-
-    return df
-
-
-# ==========================================================
-# LOAD
-# ==========================================================
+    return pd.read_excel(DATASET_PATH)
 
 try:
-
     model = load_model()
-
     df = load_dataset()
-
 except Exception as e:
-
-    st.error("Model gagal dimuat.")
-
+    st.error("Gagal memuat model atau dataset.")
     st.exception(e)
-
     st.stop()
-
-# ==========================================================
-# KATEGORI
-# ==========================================================
-
+    
 def kategori(nilai):
 
     if nilai <= 20:
@@ -98,43 +49,26 @@ def kategori(nilai):
     elif nilai <= 100:
         return "🟠 Tinggi"
 
-    else:
-        return "🔴 Sangat Tinggi"
-
-# ==========================================================
-# HEADER
-# ==========================================================
+    return "🔴 Sangat Tinggi"
 
 st.title("📈 Prediksi Kasus DBD Menggunakan SARIMAX")
 
 st.markdown("""
-Model **Seasonal AutoRegressive Integrated Moving Average with Exogenous Variables (SARIMAX)** digunakan untuk memprediksi jumlah kasus DBD berdasarkan data historis kasus dan variabel eksogen.
+Model **Seasonal AutoRegressive Integrated Moving Average with Exogenous Variables (SARIMAX)** digunakan untuk memprediksi jumlah kasus DBD satu bulan ke depan berdasarkan data historis serta variabel eksogen.
 """)
 
 st.divider()
 
-col1, col2, col3 = st.columns(3)
+c1, c2, c3 = st.columns(3)
 
-with col1:
+with c1:
+    st.metric("Jumlah Dataset", len(df))
 
-    st.metric(
-        "Dataset",
-        f"{len(df)} Data"
-    )
+with c2:
+    st.metric("Order", "(1,0,0)")
 
-with col2:
-
-    st.metric(
-        "Order",
-        "(1,0,0)"
-    )
-
-with col3:
-
-    st.metric(
-        "Seasonal",
-        "(2,0,0,12)"
-    )
+with c3:
+    st.metric("Seasonal Order", "(2,0,0,12)")
 
 st.divider()
 
@@ -142,9 +76,10 @@ st.subheader("Input Variabel Bulan Berikutnya")
 
 last = df.iloc[-1]
 
-c1, c2 = st.columns(2)
+col1, col2 = st.columns(2)
 
-with c1:
+with col1:
+
     curah = st.number_input(
         "Curah Hujan (mm)",
         value=float(last["curah_hujan"]),
@@ -158,7 +93,8 @@ with c1:
         max_value=50.0
     )
 
-with c2:
+with col2:
+
     kelembaban = st.number_input(
         "Kelembaban (%)",
         value=float(last["kelembaban"]),
@@ -167,15 +103,61 @@ with c2:
     )
 
     kepadatan = st.number_input(
-        "Kepadatan",
+        "Kepadatan Penduduk",
         value=float(last["kepadatan"]),
         min_value=0.0
     )
-  
+    
 st.divider()
+
 predict = st.button(
     "🔮 Prediksi",
     use_container_width=True,
     type="primary"
 )
-st.write(type(model))
+
+if predict:
+
+    try:
+
+        exog_next = pd.DataFrame(
+            [[curah, suhu, kelembaban, kepadatan]],
+            columns=EXOG_COLS
+        )
+
+        pred = model.forecast(
+            steps=1,
+            exog=exog_next
+        )
+
+        pred = float(pred.iloc[0])
+
+        pred = max(pred, 0)
+
+        pred = round(pred)
+
+        st.success("Prediksi berhasil dilakukan.")
+
+        st.divider()
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+
+            st.metric(
+                "Prediksi Jumlah Kasus",
+                f"{pred} Kasus"
+            )
+
+        with c2:
+
+            st.metric(
+                "Kategori",
+                kategori(pred)
+            )
+
+    except Exception as e:
+
+        st.error("Forecast gagal.")
+
+        st.exception(e)
