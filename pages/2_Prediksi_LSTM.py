@@ -381,14 +381,6 @@ input_df = pd.DataFrame(
     input_history,
     columns=ALL_COLS
 )
-st.divider()
-
-st.subheader("Preview Data Input")
-st.dataframe(
-    input_df,
-    use_container_width=True,
-    hide_index=True
-)
 # ==========================================================
 # TOMBOL PREDIKSI
 # ==========================================================
@@ -455,35 +447,11 @@ if predict_btn:
                 label="Kategori",
                 value=kategori(pred)
             )
-        st.divider()
-        
-        st.subheader("Ringkasan Input")
-        st.dataframe(
-            input_df,
-            use_container_width=True,
-            hide_index=True
-        )
-        
-        st.info(
-        """
-        **Keterangan**
-        
-        Prediksi dihasilkan menggunakan model **Long Short-Term Memory (LSTM)**
-        dengan panjang window sebanyak **3 bulan**.
-        
-        Model dibangun menggunakan:
-        
-        - 5 variabel
-        - Window Lag = 3
-        - LSTM Units = 8
-        - Optimizer Adam
-        - Huber Loss
-        """
-        )
     except Exception as e:
         st.error("Prediksi gagal.")
         st.exception(e)
         st.stop()
+        
     st.divider()
 
     st.subheader("📈 Visualisasi Prediksi")
