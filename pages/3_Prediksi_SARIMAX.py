@@ -13,6 +13,8 @@ st.set_page_config(
 
 DATASET_PATH = Path("dataset.xlsx")
 
+history["waktu"] = pd.to_datetime(history["waktu"])
+
 EXOG_COLS = [
     "curah_hujan",
     "suhu",
@@ -131,16 +133,18 @@ def plot_prediction(df, pred):
 
     labels = []
 
-    if "waktu" in df.columns:
+   if "waktu" in history.columns:
 
-        labels = history["waktu"].dt.strftime("%b\n%Y").tolist()
+    history["waktu"] = pd.to_datetime(history["waktu"])
 
-        next_month = (
-            history["waktu"].iloc[-1]
-            + pd.DateOffset(months=1)
-        ).strftime("%b\n%Y")
+    labels = history["waktu"].dt.strftime("%b\n%Y").tolist()
 
-        labels.append(next_month)
+    next_month = (
+        history["waktu"].iloc[-1] +
+        pd.DateOffset(months=1)
+    ).strftime("%b\n%Y")
+
+    labels.append(next_month)
 
     else:
 
