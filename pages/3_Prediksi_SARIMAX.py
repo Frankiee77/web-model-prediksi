@@ -62,12 +62,6 @@ st.write("Observasi terakhir model:")
 
 st.write(model.model.endog[-5:])
 
-pred = model.forecast(
-    steps=1,
-    exog=exog_next
-)
-
-st.write(pred)
 st.divider()
 
 c1, c2, c3 = st.columns(3)
@@ -140,6 +134,8 @@ if predict:
             steps=1,
             exog=exog_next
         )
+        
+        st.write(pred)
 
         pred = float(pred.iloc[0])
 
