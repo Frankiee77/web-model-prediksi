@@ -247,7 +247,7 @@ def kategori(prediksi):
 # HEADER
 # ==========================================================
 
-st.title("🧠 Prediksi Kasus DBD Menggunakan LSTM")
+st.title("Prediksi Kasus DBD Menggunakan LSTM")
 
 st.markdown(
 """
