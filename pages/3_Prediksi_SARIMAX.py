@@ -10,7 +10,6 @@ st.set_page_config(
     layout="wide"
 )
 
-
 DATASET_PATH = Path("dataset.xlsx")
 
 EXOG_COLS = [
@@ -23,10 +22,6 @@ EXOG_COLS = [
 ORDER = (1, 0, 0)
 SEASONAL_ORDER = (2, 0, 0, 12)
 
-@st.cache_data
-def load_dataset():
-    return pd.read_excel(DATASET_PATH)
-
 # ==========================================================
 # LOAD DATASET
 # ==========================================================
@@ -34,7 +29,6 @@ def load_dataset():
 @st.cache_data
 def load_dataset():
     return pd.read_excel(DATASET_PATH)
-
 
 # ==========================================================
 # FIT SARIMAX
@@ -65,7 +59,7 @@ def fit_sarimax(df):
 try:
     df = load_dataset()
     with st.spinner("Membangun model SARIMAX..."):
-    result = fit_sarimax(df)
+        result = fit_sarimax(df)
     
 except Exception as e:
     st.error("Model gagal dibuat.")
