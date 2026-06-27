@@ -276,22 +276,22 @@ if predict:
                 "Kategori",
                 kategori(pred)
             )
-            st.divider()
-
-            st.subheader("📈 Visualisasi Prediksi")
             
-            fig = plot_prediction(df, pred)
-            
-            st.pyplot(fig)
-            
-            st.caption(
-                "Grafik menampilkan 12 bulan terakhir data historis "
-                "dan hasil prediksi bulan berikutnya menggunakan model SARIMAX."
-            )
-
     except Exception as e:
 
         st.error("Forecast gagal.")
 
         st.exception(e)
-        
+
+    st.divider()
+
+    st.subheader("📈 Visualisasi Prediksi")
+            
+    fig = plot_prediction(df, pred)
+            
+    st.pyplot(fig)
+            
+    st.caption(
+        "Grafik menampilkan 12 bulan terakhir data historis "
+        "dan hasil prediksi bulan berikutnya menggunakan model SARIMAX."
+    )
