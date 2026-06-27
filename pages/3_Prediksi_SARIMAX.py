@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+import matplotlib.pyplot as plt
 from pathlib import Path
 
 st.set_page_config(
@@ -162,9 +163,134 @@ if predict:
                 "Kategori",
                 kategori(pred)
             )
+            st.divider()
+
+            st.subheader("📈 Visualisasi Prediksi")
+            
+            fig = plot_prediction(df, pred)
+            
+            st.pyplot(fig)
+            
+            st.caption(
+                "Grafik menampilkan 12 bulan terakhir data historis "
+                "dan hasil prediksi bulan berikutnya menggunakan model SARIMAX."
+            )
 
     except Exception as e:
 
         st.error("Forecast gagal.")
 
         st.exception(e)
+        
+def plot_prediction(df, pred):
+
+    history = df.tail(12).copy()
+
+    history = history.reset_index(drop=True)
+
+    x_hist = list(range(len(history)))
+
+    x_pred = len(history)
+
+    fig, ax = plt.subplots(figsize=(11,4))
+
+    # ===========================
+    # DATA HISTORIS
+    # ===========================
+
+    ax.plot(
+        x_hist,
+        history["kasus"],
+        marker="o",
+        linewidth=2,
+        label="Data Historis"
+    )
+
+    # ===========================
+    # GARIS MENUJU PREDIKSI
+    # ===========================
+
+    ax.plot(
+        [x_hist[-1], x_pred],
+        [history["kasus"].iloc[-1], pred],
+        "--",
+        linewidth=2,
+        color="red"
+    )
+
+    # ===========================
+    # TITIK PREDIKSI
+    # ===========================
+
+    ax.scatter(
+        x_pred,
+        pred,
+        color="red",
+        s=120,
+        label="Prediksi"
+    )
+
+    # ===========================
+    # LABEL NILAI
+    # ===========================
+
+    for i, y in enumerate(history["kasus"]):
+
+        ax.text(
+            i,
+            y+3,
+            f"{int(y)}",
+            fontsize=8,
+            ha="center"
+        )
+
+    ax.text(
+        x_pred,
+        pred+3,
+        f"{int(pred)}",
+        fontsize=9,
+        color="red",
+        ha="center",
+        fontweight="bold"
+    )
+
+    # ===========================
+    # LABEL X
+    # ===========================
+
+    labels = []
+
+    if "waktu" in df.columns:
+
+        labels = history["waktu"].dt.strftime("%b\n%Y").tolist()
+
+        next_month = (
+            history["waktu"].iloc[-1]
+            + pd.DateOffset(months=1)
+        ).strftime("%b\n%Y")
+
+        labels.append(next_month)
+
+    else:
+
+        labels = [str(i+1) for i in range(len(history))]
+        labels.append("Pred")
+
+    ax.set_xticks(list(range(len(labels))))
+
+    ax.set_xticklabels(labels)
+
+    ax.set_ylabel("Kasus DBD")
+
+    ax.set_xlabel("Periode")
+
+    ax.set_title("Visualisasi Data Historis dan Prediksi")
+
+    ax.grid(alpha=0.3)
+
+    ax.legend()
+
+    plt.tight_layout()
+
+    return fig
+    
