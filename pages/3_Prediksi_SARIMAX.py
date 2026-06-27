@@ -189,7 +189,7 @@ def kategori(nilai):
         return "🟠 Tinggi"
     return "🔴 Sangat Tinggi"
 
-st.title("📈 Prediksi Kasus DBD Menggunakan SARIMAX")
+st.title("Prediksi Kasus DBD Menggunakan SARIMAX")
 
 st.markdown("""
 Model **Seasonal AutoRegressive Integrated Moving Average with Exogenous Variables (SARIMAX)** digunakan untuk memprediksi jumlah kasus DBD satu bulan ke depan berdasarkan data historis serta variabel eksogen.
