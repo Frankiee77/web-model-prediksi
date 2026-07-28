@@ -8,13 +8,14 @@ from utils.session import init_session_state, add_to_history
 from utils.model_info import get_sarimax_model_info
 from utils.plot import plot_sarimax_inputs
 from utils.preprocess import compute_diff_exog
+from utils.loader import load_sarimax
 
-# Jika menggunakan statsmodels SARIMAX
-try:
-    import pickle
-    MODEL_AVAILABLE = True
-except ImportError:
-    MODEL_AVAILABLE = False
+model = load_sarimax()
+
+prediction = model.forecast(
+    steps=1,
+    exog=exog_diff
+)
 
 # Inisialisasi session state untuk riwayat
 init_session_state()
