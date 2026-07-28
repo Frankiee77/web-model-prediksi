@@ -10,7 +10,7 @@ from utils.plot import plot_sarimax_inputs
 from utils.preprocess import compute_diff_exog
 from utils.loader import load_sarimax
 
-martifacts = load_sarimax()
+artifacts = load_sarimax()
 
 result = artifacts["result"]
 
