@@ -11,7 +11,7 @@ MODEL_DIR = Path("models")
 def load_lstm():
 
     model = load_model(
-        MODEL_DIR / "models/lstm_dbd.keras",
+        MODEL_DIR / "lstm_dbd.keras",
         compile=False
     )
 
