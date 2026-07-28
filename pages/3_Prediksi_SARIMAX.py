@@ -1,297 +1,125 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-import matplotlib.pyplot as plt
-from pathlib import Path
+from datetime import datetime
+from typing import List
 
-st.set_page_config(
-    page_title="Prediksi DBD - SARIMAX",
-    page_icon="📈",
-    layout="wide"
-)
+# Import utilitas
+from utils.month_helper import get_previous_months, format_month_year
+from utils.session import init_session_state, add_to_history
+from utils.model_info import get_sarimax_model_info
+from utils.plot import plot_sarimax_inputs
+from utils.preprocess import compute_diff_exog
 
-DATASET_PATH = Path("dataset.xlsx")
-
-EXOG_COLS = [
-    "curah_hujan",
-    "suhu",
-    "kelembaban",
-    "kepadatan"
-]
-
-ORDER = (1, 0, 0)
-SEASONAL_ORDER = (2, 0, 0, 12)
-
-# ==========================================================
-# LOAD DATASET
-# ==========================================================
-
-@st.cache_data
-def load_dataset():
-    return pd.read_excel(DATASET_PATH)
-
-# ==========================================================
-# FIT SARIMAX
-# ==========================================================
-
-@st.cache_resource
-def fit_sarimax(df):
-
-    model = SARIMAX(
-        endog=df["kasus"],
-        exog=df[EXOG_COLS],
-        order=ORDER,
-        seasonal_order=SEASONAL_ORDER,
-        enforce_stationarity=False,
-        enforce_invertibility=False
-    )
-
-    result = model.fit(
-        disp=False,
-        maxiter=150
-    )
-    return result
-
-def plot_prediction(df, pred):
-
-    history = df.tail(12).copy()
-
-    history = history.reset_index(drop=True)
-
-    x_hist = list(range(len(history)))
-
-    x_pred = len(history)
-
-    fig, ax = plt.subplots(figsize=(11,4))
-
-    # ===========================
-    # DATA HISTORIS
-    # ===========================
-
-    ax.plot(
-        x_hist,
-        history["kasus"],
-        marker="o",
-        linewidth=2,
-        label="Data Historis"
-    )
-
-    # ===========================
-    # GARIS MENUJU PREDIKSI
-    # ===========================
-
-    ax.plot(
-        [x_hist[-1], x_pred],
-        [history["kasus"].iloc[-1], pred],
-        "--",
-        linewidth=2,
-        color="red"
-    )
-
-    # ===========================
-    # TITIK PREDIKSI
-    # ===========================
-
-    ax.scatter(
-        x_pred,
-        pred,
-        color="red",
-        s=120,
-        label="Prediksi"
-    )
-
-    # ===========================
-    # LABEL NILAI
-    # ===========================
-
-    for i, y in enumerate(history["kasus"]):
-
-        ax.text(
-            i,
-            y+3,
-            f"{int(y)}",
-            fontsize=8,
-            ha="center"
-        )
-
-    ax.text(
-        x_pred,
-        pred+3,
-        f"{int(pred)}",
-        fontsize=9,
-        color="red",
-        ha="center",
-        fontweight="bold"
-    )
-
-    # ===========================
-    # LABEL X
-    # ===========================
-
-    labels = []
-
-    if "waktu" in history.columns:
-        
-        history["waktu"] = pd.to_datetime(history["waktu"])
-    
-        labels = history["waktu"].dt.strftime("%b\n%Y").tolist()
-    
-        next_month = (
-            history["waktu"].iloc[-1] +
-            pd.DateOffset(months=1)
-        ).strftime("%b\n%Y")
-    
-        labels.append(next_month)
-
-    else:
-
-        labels = [str(i+1) for i in range(len(history))]
-        labels.append("Pred")
-
-    ax.set_xticks(list(range(len(labels))))
-
-    ax.set_xticklabels(labels)
-
-    ax.set_ylabel("Kasus DBD")
-
-    ax.set_xlabel("Periode")
-
-    ax.set_title("Visualisasi Data Historis dan Prediksi")
-
-    ax.grid(alpha=0.3)
-
-    ax.legend()
-
-    plt.tight_layout()
-
-    return fig
-# ==========================================================
-# LOAD RESOURCE
-# ==========================================================
-
+# Jika menggunakan statsmodels SARIMAX
 try:
-    df = load_dataset()
-    with st.spinner("Membangun model SARIMAX..."):
-        result = fit_sarimax(df)
-    
-except Exception as e:
-    st.error("Model gagal dibuat.")
-    st.exception(e)
-    st.stop()
-    
-def kategori(nilai):
-    if nilai <= 20:
-        return "🟢 Rendah"
-    elif nilai <= 50:
-        return "🟡 Sedang"
-    elif nilai <= 100:
-        return "🟠 Tinggi"
-    return "🔴 Sangat Tinggi"
+    import pickle
+    MODEL_AVAILABLE = True
+except ImportError:
+    MODEL_AVAILABLE = False
 
-st.title("Prediksi Kasus DBD Menggunakan SARIMAX")
+# Inisialisasi session state untuk riwayat
+init_session_state()
 
-st.markdown("""
-Model **Seasonal AutoRegressive Integrated Moving Average with Exogenous Variables (SARIMAX)** digunakan untuk memprediksi jumlah kasus DBD satu bulan ke depan berdasarkan data historis serta variabel eksogen.
-""")
+# Header halaman
+st.title("Prediksi DBD dengan Model SARIMAX")
 
-st.divider()
+# Informasi Model
+with st.expander("Informasi Model SARIMAX", expanded=True):
+    model_info = get_sarimax_model_info()
+    st.write(f"**Order:** {model_info['Order']}")
+    st.write(f"**Seasonal Order:** {model_info['Seasonal Order']}")
+    st.write(f"**Differencing Exogenous (orde):** {model_info['Differencing Exogenous']}")
+    st.write(f"**Metode Validasi:** {model_info['Validasi']}")
+    st.write(f"**MAE:** {model_info['MAE']}")
+    st.write(f"**RMSE:** {model_info['RMSE']}")
+    st.write(f"**MAPE:** {model_info['MAPE']}%")
 
-c1, c2, c3 = st.columns(3)
+# Pemilihan bulan prediksi
+st.header("Pilih Bulan Prediksi")
+col_year, col_month = st.columns(2)
+with col_year:
+    year_pred = st.number_input("Tahun Prediksi", min_value=2021, max_value=2030, value=datetime.now().year, step=1)
+with col_month:
+    month_pred = st.selectbox("Bulan Prediksi", [i for i in range(1, 13)])
+month_name_pred = format_month_year(year_pred, month_pred)
+st.write(f"Prediksi: **{month_name_pred}**")
 
-with c1:
-    st.metric("Jumlah Dataset", len(df))
-with c2:
-    st.metric("Order", "(1,0,0)")
-with c3:
-    st.metric("Seasonal Order", "(2,0,0,12)")
-    
-st.divider()
+# Tentukan periode t-1 (bulan sebelumnya)
+prev_months = get_previous_months(year_pred, month_pred, n=1)
+prev_year, prev_mon = prev_months[0]
+prev_month_label = format_month_year(prev_year, prev_mon)
+st.write(f"Data historis untuk masukan (periode t-1): {prev_month_label}")
 
-st.subheader("Input Variabel Bulan Berikutnya")
+# Input data eksogen untuk periode t-1 dan t
+st.subheader("Masukkan Data Eksogen")
+exog_vars = ["Curah Hujan", "Suhu", "Kelembaban", "Kepadatan Jentik"]
+exog_values_prev = {}
+exog_values_curr = {}
 
-last = df.iloc[-1]
-col1, col2 = st.columns(2)
-with col1:
-    curah = st.number_input(
-        "Curah Hujan (mm)",
-        value=float(last["curah_hujan"]),
-        min_value=0.0
-    )
-    suhu = st.number_input(
-        "Suhu (°C)",
-        value=float(last["suhu"]),
-        min_value=0.0,
-        max_value=50.0
-    )
+cols = st.columns(2 + len(exog_vars))
+cols[0].write("Variabel")
+cols[1].write(prev_month_label)
+cols[2].write(month_name_pred)
+for idx, var in enumerate(exog_vars, start=3):
+    cols[idx].write(var)
 
-with col2:
-    kelembaban = st.number_input(
-        "Kelembaban (%)",
-        value=float(last["kelembaban"]),
-        min_value=0.0,
-        max_value=100.0
-    )
-    kepadatan = st.number_input(
-        "Kepadatan Penduduk",
-        value=float(last["kepadatan"]),
-        min_value=0.0
-    )
-    
-st.divider()
+for idx, var in enumerate(exog_vars):
+    cols[0].write(var)
+    exog_values_prev[var] = cols[1].number_input(f"{var}_t-1", min_value=0.0, step=0.1)
+    exog_values_curr[var] = cols[2].number_input(f"{var}_t", min_value=0.0, step=0.1)
 
-predict = st.button(
-    "🔮 Prediksi",
-    use_container_width=True,
-    type="primary"
-)
+# Hitung differencing untuk setiap variabel
+st.subheader("Ringkasan Differensial Eksogen")
+diff_summary = {}
+for var in exog_vars:
+    diff = compute_diff_exog(exog_values_prev[var], exog_values_curr[var])
+    diff_summary[f"Delta {var}"] = diff
+st.write(diff_summary)
 
-if predict:
-
+# Proses prediksi saat tombol ditekan
+if st.button("Prediksi DBD"):
+    # Siapkan data untuk model
     try:
-        exog_next = pd.DataFrame(
-            [[curah, suhu, kelembaban, kepadatan]],
-            columns=EXOG_COLS
-        )
-        pred = result.forecast(
-            steps=1,
-            exog=exog_next
-        )
-        pred = round(max(float(pred.iloc[0]),0))
-
-        st.success("Prediksi berhasil dilakukan.")
-
-        st.divider()
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-            st.metric(
-                "Prediksi Jumlah Kasus",
-                f"{pred} Kasus"
+        # Contoh: mengumpulkan differensial menjadi array input
+        exog_diff = [diff_summary[f"Delta {var}"] for var in exog_vars]
+        # Muat model SARIMAX (pastikan file model tersedia)
+        if MODEL_AVAILABLE:
+            with open("sarimax_model.pkl", "rb") as f:
+                model = pickle.load(f)
+            pred = model.predict(
+                start=0, end=0, exog=[exog_diff]  # contoh metode; sesuaikan implementasi
             )
-
-        with c2:
-            st.metric(
-                "Kategori",
-                kategori(pred)
-            )
-            
+            prediction = float(pred.iloc[0])
+        else:
+            # Placeholder: menggunakan salah satu input
+            prediction = float(exog_values_curr["Kepadatan Jentik"])
     except Exception as e:
+        st.error(f"Terjadi kesalahan saat prediksi: {e}")
+        prediction = None
 
-        st.error("Forecast gagal.")
+    if prediction is not None:
+        kategori = "Rendah" if prediction < 50 else ("Sedang" if prediction < 100 else "Tinggi")
+        st.subheader("Hasil Prediksi")
+        st.write(f"**Bulan Prediksi:** {month_name_pred}")
+        st.write(f"**Jumlah Kasus (diprediksi):** {prediction:.2f}")
+        st.write(f"**Kategori:** {kategori}")
 
-        st.exception(e)
+        # Tambahkan ke riwayat prediksi
+        add_to_history("SARIMAX", month_name_pred, prediction)
 
-    st.divider()
+        # Grafik berdasarkan input user (variabel eksogen)
+        st.altair_chart(
+            plot_sarimax_inputs(prev_month_label, month_name_pred,
+                                [exog_values_prev["Curah Hujan"], exog_values_curr["Curah Hujan"]],
+                                [exog_values_prev["Suhu"], exog_values_curr["Suhu"]],
+                                [exog_values_prev["Kelembaban"], exog_values_curr["Kelembaban"]],
+                                [exog_values_prev["Kepadatan Jentik"], exog_values_curr["Kepadatan Jentik"]]
+                               ),
+            use_container_width=True
+        )
 
-    st.subheader("📈 Visualisasi Prediksi")
-            
-    fig = plot_prediction(df, pred)
-            
-    st.pyplot(fig)
-            
-    st.caption(
-        "Grafik menampilkan 12 bulan terakhir data historis "
-        "dan hasil prediksi bulan berikutnya menggunakan model SARIMAX."
-    )
+# Tampilkan riwayat prediksi jika ada
+if st.session_state['history']:
+    st.subheader("Riwayat Prediksi")
+    import pandas as pd
+    df_history = pd.DataFrame(st.session_state['history'])
+    st.table(df_history)
