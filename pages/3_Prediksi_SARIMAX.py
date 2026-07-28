@@ -12,9 +12,9 @@ from utils.loader import load_sarimax
 
 artifacts = load_sarimax()
 
-result = artifacts["result"]
+model = artifacts["model"]
 
-prediction = result.forecast(
+prediction = model.forecast(
     steps=1,
     exog=exog_diff
 )
