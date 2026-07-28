@@ -12,12 +12,11 @@ from utils.loader import load_sarimax
 
 artifacts = load_sarimax()
 
-model = artifacts["model"]
+result = artifacts["model"]
 
-prediction = model.forecast(
-    steps=1,
-    exog=exog_diff
-)
+lambda_boxcox = artifacts["fitted_lambda"]
+
+last_values = artifacts["last_values"]
 
 # Inisialisasi session state untuk riwayat
 init_session_state()
