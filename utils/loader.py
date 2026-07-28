@@ -11,7 +11,7 @@ MODEL_DIR = Path("models")
 def load_lstm():
 
     model = load_model(
-        MODEL_DIR / "lstm_dbd.keras",
+        MODEL_DIR / "models/lstm_dbd.keras",
         compile=False
     )
 
@@ -35,7 +35,7 @@ def load_lstm_scaler():
 @st.cache_resource
 def load_sarimax():
 
-    with open(MODEL_DIR / "sarimax_artifacts.pkl", "rb") as f:
+    with open(MODEL_DIR / "models/sarimax_artifacts.pkl", "rb") as f:
         model = pickle.load(f)
 
     return model
