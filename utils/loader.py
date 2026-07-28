@@ -35,7 +35,8 @@ def load_lstm_scaler():
 @st.cache_resource
 def load_sarimax():
 
-    with open(MODEL_DIR / "models/sarimax_artifacts.pkl", "rb") as f:
-        model = pickle.load(f)
+    with open("models/sarimax_artifacts.pkl","rb") as f:
 
-    return model
+        artifacts = pickle.load(f)
+
+    return artifacts
