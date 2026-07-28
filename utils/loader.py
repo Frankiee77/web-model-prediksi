@@ -37,6 +37,29 @@ def load_sarimax():
 
     with open("models/sarimax_artifacts.pkl","rb") as f:
 
-        artifacts = pickle.load(f)
+        artifacts = {
+
+            "model": result_sarimax,
+        
+            "fitted_lambda": fitted_lambda,
+        
+            "last_values": {
+                'curah_hujan': 2209,
+                'suhu': 24.01,
+                'kelembaban': 89.87,
+                'kepadatan': 7820
+            },
+        
+            "order": ORDER,
+        
+            "seasonal_order": SEASONAL_ORDER,
+        
+            "exog_cols": exog_cols,
+        
+            "mae": mae_sarimax,
+        
+            "mape": mape_sarimax
+        
+        }
 
     return artifacts
