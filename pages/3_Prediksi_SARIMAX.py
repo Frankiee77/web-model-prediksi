@@ -10,9 +10,11 @@ from utils.plot import plot_sarimax_inputs
 from utils.preprocess import compute_diff_exog
 from utils.loader import load_sarimax
 
-model = load_sarimax()
+martifacts = load_sarimax()
 
-prediction = model.forecast(
+result = artifacts["result"]
+
+prediction = result.forecast(
     steps=1,
     exog=exog_diff
 )
