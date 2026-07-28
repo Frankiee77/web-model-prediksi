@@ -8,13 +8,14 @@ from utils.session import init_session_state, add_to_history
 from utils.model_info import get_lstm_model_info
 from utils.plot import plot_lstm_prediction
 from utils.preprocess import prepare_lstm_input
+from utils.loader import (
+    load_lstm,
+    load_lstm_scaler
+)
 
-# Jika menggunakan model Keras
-try:
-    from tensorflow.keras.models import load_model
-    MODEL_AVAILABLE = True
-except ImportError:
-    MODEL_AVAILABLE = False
+model = load_lstm()
+
+scaler_target, scaler_feature = load_lstm_scaler()
 
 # Inisialisasi session state untuk riwayat
 init_session_state()
