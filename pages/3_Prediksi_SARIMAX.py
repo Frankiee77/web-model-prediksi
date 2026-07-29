@@ -38,7 +38,7 @@ init_session_state()
 
 # Variabel eksogen yang digunakan model (3 variabel)
 # Kepadatan dikeluarkan karena tidak stasioner setelah berbagai transformasi
-EXOG_VARS = ["curah_hujan", "suhu", "kelembaban"]
+EXOG_VARS = ["curah_hujan", "suhu", "kelembaban", "kepadatan"]
 
 LABEL_VARS = {
     "curah_hujan": "Curah Hujan (mm)",
