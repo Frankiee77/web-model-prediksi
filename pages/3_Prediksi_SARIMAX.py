@@ -335,10 +335,9 @@ if predict_btn:
         # -----------------------------
         ax.plot(
             [label_t1, label_t],
-            [input_t1["kasus"], input_t["kasus"]],
             color="#1f77b4",
             linewidth=2.5,
-            marker="o",
+            marker="s",
             markersize=8,
             label="Data Aktual"
         )
@@ -348,11 +347,10 @@ if predict_btn:
         # -----------------------------
         ax.plot(
             [label_t, month_name_pred],
-            [input_t["kasus"], pred],
             color="#d62728",
             linewidth=2.5,
             linestyle="--",
-            marker="*",
+            marker="o",
             markersize=12,
             label="Prediksi"
         )
