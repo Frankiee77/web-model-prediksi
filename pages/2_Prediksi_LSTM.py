@@ -116,7 +116,7 @@ st.subheader("Masukkan Data Historis 3 Bulan Terakhir")
 st.info(
     "Masukkan data aktual untuk setiap variabel pada 3 bulan sebelum "
     "bulan yang ingin diprediksi. Data ini digunakan sebagai window "
-    "input model LSTM sesuai metode Walk-Forward Validation."
+    "input model LSTM."
 )
 
 input_rows = []
