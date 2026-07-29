@@ -200,7 +200,7 @@ if predict_btn:
 
         # 1. Hitung differencing otomatis
         exog_transformed = hitung_exog_transformed(input_user)
-        # shape (1, 3): [curah_diff, suhu_diff, kelembaban_asli, kepadatan_diff]
+        # shape (1, 4): [curah_diff, suhu_diff, kelembaban_asli, kepadatan_diff]
 
         # 2. Forecast dalam skala Box-Cox
         pred_transformed = result.forecast(steps=1, exog=exog_transformed)[0]
