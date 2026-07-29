@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import altair as alt
+import matplotlib.pyplot as plt
 from datetime import datetime
 from scipy.special import inv_boxcox
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -327,52 +327,73 @@ if predict_btn:
         st.divider()
         st.subheader("📈 Grafik Hasil Prediksi Kasus DBD")
         
-        chart_df = pd.DataFrame({
-            "Periode": [label_t1, label_t, month_name_pred],
-            "Jumlah Kasus": [
-                input_t1["kasus"],
-                input_t["kasus"],
-                pred
-            ]
-        })
-
-        # Data aktual (t-1 -> t)
-        actual_df = chart_df.iloc[:2]
+        # Membuat figure
+        fig, ax = plt.subplots(figsize=(8, 5))
         
-        # Prediksi (t -> t+1)
-        pred_df = chart_df.iloc[1:]
-
-        actual_line = (
-            alt.Chart(actual_df)
-            .mark_line(
-                point=True,
-                strokeWidth=3,
-                color="#1f77b4"
-            )
-            .encode(
-                x=alt.X("Periode:N", sort=None, title="Periode"),
-                y=alt.Y("Jumlah Kasus:Q", title="Jumlah Kasus DBD"),
-                tooltip=["Periode", "Jumlah Kasus"]
-            )
+        # -----------------------------
+        # Data Aktual (t-1 -> t)
+        # -----------------------------
+        ax.plot(
+            [label_t1, label_t],
+            [input_t1["kasus"], input_t["kasus"]],
+            color="#1f77b4",
+            linewidth=2.5,
+            marker="o",
+            markersize=8,
+            label="Data Aktual"
         )
-        pred_line = (
-            alt.Chart(pred_df)
-            .mark_line(
-                point=True,
-                strokeWidth=3,
-                strokeDash=[6,4],
-                color="#d62728"
-            )
-            .encode(
-                x=alt.X("Periode:N", sort=None),
-                y="Jumlah Kasus:Q",
-                tooltip=["Periode", "Jumlah Kasus"]
-            )
+        
+        # -----------------------------
+        # Data Prediksi (t -> t+1)
+        # -----------------------------
+        ax.plot(
+            [label_t, month_name_pred],
+            [input_t["kasus"], pred],
+            color="#d62728",
+            linewidth=2.5,
+            linestyle="--",
+            marker="*",
+            markersize=12,
+            label="Prediksi"
         )
-
-        chart = actual_line + pred_line
-
-        st.altair_chart(chart, use_container_width=True)
+        
+        # -----------------------------
+        # Menampilkan nilai pada titik
+        # -----------------------------
+        points = [
+            (label_t1, input_t1["kasus"]),
+            (label_t, input_t["kasus"]),
+            (month_name_pred, pred)
+        ]
+        
+        for x, y in points:
+            ax.text(
+                x,
+                y + 1,
+                f"{int(y)}",
+                ha="center",
+                fontsize=10,
+                fontweight="bold"
+            )
+        
+        # -----------------------------
+        # Pengaturan Grafik
+        # -----------------------------
+        ax.set_title("Grafik Hasil Prediksi Kasus DBD", fontsize=14, fontweight="bold")
+        ax.set_xlabel("Periode")
+        ax.set_ylabel("Jumlah Kasus DBD")
+        
+        ax.grid(True, axis="y", linestyle="--", alpha=0.4)
+        
+        ax.legend()
+        
+        plt.xticks(rotation=0)
+        plt.tight_layout()
+        
+        # Tampilkan di Streamlit
+        st.pyplot(fig)
+        
+        plt.close(fig)
 
     except Exception as e:
         st.error("Prediksi gagal.")
