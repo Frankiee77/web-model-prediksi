@@ -348,7 +348,7 @@ if predict_btn:
         line = (
             alt.Chart(chart_df)
             .mark_line(
-                point=True
+                point=True,
                 strokeWidth=3,
                 strokeDash=[6, 4]
             )
