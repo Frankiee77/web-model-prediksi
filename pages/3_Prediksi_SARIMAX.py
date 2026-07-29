@@ -89,16 +89,8 @@ st.title("Prediksi DBD dengan Model SARIMAX")
 
 with st.expander("ℹ️ Informasi Model SARIMAX", expanded=True):
     model_info = get_sarimax_model_info()
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.write(f"**Order:** {model_info['Order']}")
-        st.write(f"**Seasonal Order:** {model_info['Seasonal Order']}")
-    with c2:
-        st.write(f"**Metode Validasi:** {model_info['Validasi']}")
-        st.write(f"**MAE:** {model_info['MAE']}")
-    with c3:
-        st.write(f"**MAPE:** {model_info['MAPE']}%")
-        st.write(f"**RMSE:** {model_info['RMSE']}")
+    st.write(f"**Order:** {model_info['Order']}")
+    st.write(f"**Seasonal Order:** {model_info['Seasonal Order']}")
 
 st.divider()
 
