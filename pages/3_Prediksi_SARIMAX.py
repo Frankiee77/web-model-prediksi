@@ -353,7 +353,11 @@ if predict_btn:
                 strokeDash=[6, 4]
             )
             .encode(
-                x=alt.X("Periode:N", title="Periode"),
+                x=alt.X(
+                    "Periode:N",
+                    title="Periode",
+                    sort=None
+                ),
                 y=alt.Y("Jumlah Kasus:Q", title="Jumlah Kasus DBD"),
                 color=alt.Color(
                     "Tipe:N",
