@@ -77,12 +77,6 @@ with st.expander("ℹ️ Informasi Model LSTM", expanded=True):
         st.write(f"**Model:** {model_info['Model']}")
         st.write(f"**Window Input:** {model_info['Window']} bulan")
         st.write(f"**Jumlah Variabel:** {model_info['Jumlah Variabel']}")
-    with c2:
-        st.write(f"**Metode Validasi:** {model_info['Validasi']}")
-        st.write(f"**MAE:** {model_info['MAE']}")
-    with c3:
-        st.write(f"**MAPE:** {model_info['MAPE']}%")
-        st.write(f"**RMSE:** {model_info['RMSE']}")
 
 st.divider()
 
