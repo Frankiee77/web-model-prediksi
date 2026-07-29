@@ -236,7 +236,7 @@ if predict_btn:
                     round(exog_transformed[0][0], 4),
                     round(exog_transformed[0][1], 4),
                     round(exog_transformed[0][2], 4),
-                    round(exog_transformed[0][2], 4)
+                    round(exog_transformed[0][3], 4)
                 ],
                 "Transformasi":      ["Differencing", "Differencing", "Nilai Asli"],
             })
