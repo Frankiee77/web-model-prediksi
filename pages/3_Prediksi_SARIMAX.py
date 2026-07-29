@@ -166,7 +166,7 @@ with col2:
     )
     kepadatan = st.number_input(
         LABEL_VARS["kepadatan"],
-        min_value=0.0, max_value=1000.0, step=10.0,
+        min_value=0.0, max_value=10000.0, step=10.0,
         value=last_values["kepadatan"],
         help="Kepadatan Penduduk bulan yang ingin diprediksi (jiwa/km2)"
     )
