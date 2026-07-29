@@ -335,6 +335,7 @@ if predict_btn:
         # -----------------------------
         ax.plot(
             [label_t1, label_t],
+            [input_t1["kasus"], input_t["kasus"]],
             color="#1f77b4",
             linewidth=2.5,
             marker="s",
@@ -347,6 +348,7 @@ if predict_btn:
         # -----------------------------
         ax.plot(
             [label_t, month_name_pred],
+            [input_t["kasus"], pred],
             color="#d62728",
             linewidth=2.5,
             linestyle="--",
@@ -354,25 +356,6 @@ if predict_btn:
             markersize=12,
             label="Prediksi"
         )
-        
-        # -----------------------------
-        # Menampilkan nilai pada titik
-        # -----------------------------
-        points = [
-            (label_t1, input_t1["kasus"]),
-            (label_t, input_t["kasus"]),
-            (month_name_pred, pred)
-        ]
-        
-        for x, y in points:
-            ax.text(
-                x,
-                y + 1,
-                f"{int(y)}",
-                ha="center",
-                fontsize=10,
-                fontweight="bold"
-            )
         
         # -----------------------------
         # Pengaturan Grafik
