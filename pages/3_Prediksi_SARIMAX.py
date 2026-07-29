@@ -15,18 +15,19 @@ from utils.loader import load_sarimax, load_dataset
 # LOAD MODEL & DATASET
 # ==========================================================
 
-artifacts      = load_sarimax()
-result         = artifacts["model"]
-fitted_lambda  = artifacts["fitted_lambda"]
-# last_values diambil dari dataset terbaru (bukan dari artifacts)
-# agar referensi differencing selalu mengacu pada data paling akhir
-df             = load_dataset()
-last_row       = df.iloc[-1]
-last_values    = {
+artifacts     = load_sarimax()
+result        = artifacts["model"]
+fitted_lambda = artifacts["fitted_lambda"]
+
+# last_values diambil dari dataset terbaru agar referensi
+# differencing selalu mengacu pada data paling akhir
+df       = load_dataset()
+last_row = df.iloc[-1]
+last_values = {
     "curah_hujan": float(last_row["curah_hujan"]),
     "suhu":        float(last_row["suhu"]),
     "kelembaban":  float(last_row["kelembaban"]),
-    "kepadatan":   float(last_row["kepadatan"])
+    "kepadatan":   float(last_row["kepadatan"]),
 }
 
 # Inisialisasi session state untuk riwayat
@@ -36,39 +37,44 @@ init_session_state()
 # KONSTANTA
 # ==========================================================
 
-# Variabel eksogen yang digunakan model (3 variabel)
-# Kepadatan dikeluarkan karena tidak stasioner setelah berbagai transformasi
-EXOG_VARS = ["curah_hujan", "suhu", "kelembaban", "kepadatan"]
+# Urutan kolom harus identik dengan saat training:
+# [curah_hujan_diff, suhu_diff, kelembaban_nodiff, kepadatan_diff]
+EXOG_COLS = ["curah_hujan", "suhu", "kelembaban", "kepadatan"]
 
 LABEL_VARS = {
     "curah_hujan": "Curah Hujan (mm)",
     "suhu":        "Suhu (°C)",
     "kelembaban":  "Kelembaban (%)",
-    "kepadatan":   "Kepadatan (jiwa/km2)"
+    "kepadatan":   "Kepadatan Penduduk (jiwa/km²)",
 }
+
+# Variabel yang di-differencing (nilai input - nilai bulan sebelumnya)
+# Kelembaban tidak di-diff karena sudah stasioner
+DIFF_VARS = ["curah_hujan", "suhu", "kepadatan"]
 
 # ==========================================================
 # FUNGSI BANTU
 # ==========================================================
 
-def hitung_exog_transformed(input_user: dict) -> np.ndarray:
+def hitung_exog_transformed(input_curr: dict, input_prev: dict) -> np.ndarray:
     """
     Transformasi input sebelum masuk model SARIMAX.
 
-    - curah_hujan : differencing (nilai_input - nilai_bulan_terakhir_dataset)
-    - suhu        : differencing (nilai_input - nilai_bulan_terakhir_dataset)
-    - kelembaban  : nilai asli (sudah stasioner, tidak di-diff)
-    - kepadatan   : differencing (nilai_input - nilai_bulan_terakhir_dataset)
+    Differencing: nilai_bulan_prediksi - nilai_bulan_sebelumnya
+    - curah_hujan : diff(1)
+    - suhu        : diff(1)
+    - kelembaban  : nilai asli (sudah stasioner)
+    - kepadatan   : diff(1)
 
-    Urutan kolom harus identik dengan saat training:
-    [curah_hujan_diff, suhu_diff, kelembaban_nodiff]
+    Urutan kolom output:
+    [curah_hujan_diff, suhu_diff, kelembaban_nodiff, kepadatan_diff]
     """
-    curah_diff = input_user["curah_hujan"] - last_values["curah_hujan"]
-    suhu_diff  = input_user["suhu"]        - last_values["suhu"]
-    kelembaban = input_user["kelembaban"]
-    kepadatan_diff  = input_user["kepadatan"]   - last_values["kepadatan"]
+    curah_diff    = input_curr["curah_hujan"] - input_prev["curah_hujan"]
+    suhu_diff     = input_curr["suhu"]        - input_prev["suhu"]
+    kelembaban    = input_curr["kelembaban"]
+    kepadatan_diff = input_curr["kepadatan"]  - input_prev["kepadatan"]
 
-    return np.array([[curah_diff, suhu_diff, kelembaban, kepadatan]])
+    return np.array([[curah_diff, suhu_diff, kelembaban, kepadatan_diff]])
 
 def kategori(nilai: float) -> str:
     if nilai <= 20:
@@ -89,6 +95,7 @@ with st.expander("ℹ️ Informasi Model SARIMAX", expanded=True):
     model_info = get_sarimax_model_info()
     st.write(f"**Order:** {model_info['Order']}")
     st.write(f"**Seasonal Order:** {model_info['Seasonal Order']}")
+
 st.divider()
 
 # ==========================================================
@@ -113,63 +120,80 @@ with col_month:
 month_name_pred = format_month_year(year_pred, month_pred)
 st.write(f"Prediksi untuk: **{month_name_pred}**")
 
-# Periode t-1: satu bulan sebelum bulan prediksi (untuk referensi user)
+# Tentukan bulan t-1 (referensi differencing)
 prev_months     = get_previous_months(year_pred, month_pred, n=1)
 prev_year, prev_mon = prev_months[0]
 prev_label      = format_month_year(prev_year, prev_mon)
 
+st.caption(
+    f"Data yang dibutuhkan: **{prev_label}** (bulan t-1) "
+    f"dan **{month_name_pred}** (bulan t)"
+)
+
 st.divider()
 
 # ==========================================================
-# INPUT VARIABEL EKSOGEN
+# INPUT DATA — LAYOUT TABEL PER BULAN (seperti LSTM)
 # ==========================================================
 
 st.subheader("Masukkan Data Variabel Iklim")
 st.info(
-    "Masukkan nilai variabel iklim pada **bulan yang ingin diprediksi**. "
-    )
+    "Masukkan nilai variabel iklim untuk **2 bulan** berikut. "
+    "Differencing dihitung otomatis dari selisih bulan t terhadap bulan t-1. "
+    "Kelembaban tidak di-differencing karena sudah stasioner."
+)
 
-# Tampilkan nilai referensi untuk transparansi
-with st.expander("📋 Nilai referensi bulan terakhir dataset", expanded=False):
-    ref_df = pd.DataFrame([{
-        LABEL_VARS["curah_hujan"]: last_values["curah_hujan"],
-        LABEL_VARS["suhu"]:        last_values["suhu"],
-        LABEL_VARS["kelembaban"]:  last_values["kelembaban"],
-        LABEL_VARS["kepadatan"]:  last_values["kepadatan"]
-    }])
-    st.dataframe(ref_df, use_container_width=True)
-    st.caption(
-        "Differencing = Nilai Input − Nilai Referensi. "
-        "Nilai referensi diambil dari baris terakhir dataset secara otomatis."
-    )
+# Dua periode: t-1 dan t (bulan prediksi)
+periods = [
+    (prev_year, prev_mon, prev_label,      "t-1"),
+    (year_pred, month_pred, month_name_pred, "t"),
+]
 
-col1, col2 = st.columns(2)
-with col1:
-    curah = st.number_input(
-        LABEL_VARS["curah_hujan"],
-        min_value=0.0, step=1.0,
-        value=last_values["curah_hujan"],
-        help="Curah hujan bulan yang ingin diprediksi (mm)"
-    )
-    suhu = st.number_input(
-        LABEL_VARS["suhu"],
-        min_value=0.0, max_value=50.0, step=0.1,
-        value=last_values["suhu"],
-        help="Suhu rata-rata bulan yang ingin diprediksi (°C)"
-    )
-with col2:
-    kelembaban = st.number_input(
-        LABEL_VARS["kelembaban"],
-        min_value=0.0, max_value=100.0, step=0.1,
-        value=last_values["kelembaban"],
-        help="Kelembaban rata-rata bulan yang ingin diprediksi (%)"
-    )
-    kepadatan = st.number_input(
-        LABEL_VARS["kepadatan"],
-        min_value=0.0, max_value=10000.0, step=10.0,
-        value=last_values["kepadatan"],
-        help="Kepadatan Penduduk bulan yang ingin diprediksi (jiwa/km2)"
-    )
+input_data = {}   # key: (year, month) → dict nilai per variabel
+
+for y, m, label, t_label in periods:
+    with st.container(border=True):
+        st.markdown(f"### {label} &nbsp;_({t_label})_")
+        c1, c2 = st.columns(2)
+        with c1:
+            curah = st.number_input(
+                LABEL_VARS["curah_hujan"], min_value=0.0, step=1.0,
+                value=last_values["curah_hujan"],
+                key=f"curah_{y}_{m}"
+            )
+            suhu = st.number_input(
+                LABEL_VARS["suhu"], min_value=0.0, max_value=50.0, step=0.1,
+                value=last_values["suhu"],
+                key=f"suhu_{y}_{m}"
+            )
+        with c2:
+            kelembaban = st.number_input(
+                LABEL_VARS["kelembaban"], min_value=0.0, max_value=100.0, step=0.1,
+                value=last_values["kelembaban"],
+                key=f"kelembaban_{y}_{m}"
+            )
+            kepadatan = st.number_input(
+                LABEL_VARS["kepadatan"], min_value=0.0, step=1.0,
+                value=last_values["kepadatan"],
+                key=f"kepadatan_{y}_{m}"
+            )
+        input_data[(y, m)] = {
+            "curah_hujan": curah,
+            "suhu":        suhu,
+            "kelembaban":  kelembaban,
+            "kepadatan":   kepadatan,
+        }
+
+# Tabel ringkasan input
+st.subheader("Ringkasan Input")
+summary_rows = []
+for y, m, label, t_label in periods:
+    row = {"Bulan": f"{label} ({t_label})"}
+    row.update({LABEL_VARS[v]: input_data[(y, m)][v] for v in EXOG_COLS})
+    summary_rows.append(row)
+
+df_summary = pd.DataFrame(summary_rows).set_index("Bulan")
+st.dataframe(df_summary, use_container_width=True)
 
 st.divider()
 
@@ -191,16 +215,12 @@ with center:
 
 if predict_btn:
     try:
-        input_user = {
-            "curah_hujan": curah,
-            "suhu":        suhu,
-            "kelembaban":  kelembaban,
-            "kepadatan":   kepadatan
-        }
+        input_prev = input_data[(prev_year, prev_mon)]
+        input_curr = input_data[(year_pred, month_pred)]
 
-        # 1. Hitung differencing otomatis
-        exog_transformed = hitung_exog_transformed(input_user)
-        # shape (1, 4): [curah_diff, suhu_diff, kelembaban_asli, kepadatan_diff]
+        # 1. Hitung differencing
+        exog_transformed = hitung_exog_transformed(input_curr, input_prev)
+        # shape (1, 4): [curah_diff, suhu_diff, kelembaban, kepadatan_diff]
 
         # 2. Forecast dalam skala Box-Cox
         pred_transformed = result.forecast(steps=1, exog=exog_transformed)[0]
@@ -221,26 +241,29 @@ if predict_btn:
         with c3:
             st.metric("Kategori Risiko", kategori(pred))
 
-        # 4. Detail transformasi (untuk transparansi & keperluan demo)
-        with st.expander("🔍 Detail transformasi input", expanded=False):
-            detail_df = pd.DataFrame({
-                "Variabel":          ["Curah Hujan", "Suhu", "Kelembaban", "Kepadatan"],
-                "Nilai Input":       [curah, suhu, kelembaban, kepadatan],
-                "Nilai Referensi":   [
-                    last_values["curah_hujan"],
-                    last_values["suhu"],
-                    last_values["kelembaban"],
-                    last_values["kepadatan"]
-                ],
-                "Nilai ke Model":    [
-                    round(exog_transformed[0][0], 4),
-                    round(exog_transformed[0][1], 4),
-                    round(exog_transformed[0][2], 4),
-                    round(exog_transformed[0][3], 4)
-                ],
-                "Transformasi":      ["Differencing", "Differencing", "Nilai Asli", "Differencing"],
-            })
-            st.dataframe(detail_df, use_container_width=True)
+        # 4. Detail transformasi
+        with st.expander("🔍 Detail transformasi input (differencing)", expanded=False):
+            detail_rows = []
+            for var in EXOG_COLS:
+                v_prev = input_prev[var]
+                v_curr = input_curr[var]
+                if var in DIFF_VARS:
+                    nilai_model = round(v_curr - v_prev, 4)
+                    transformasi = "Differencing (t - t-1)"
+                else:
+                    nilai_model  = round(v_curr, 4)
+                    transformasi = "Nilai Asli"
+                detail_rows.append({
+                    "Variabel":        LABEL_VARS[var],
+                    "Nilai t-1":       v_prev,
+                    "Nilai t":         v_curr,
+                    "Nilai ke Model":  nilai_model,
+                    "Transformasi":    transformasi,
+                })
+            st.dataframe(
+                pd.DataFrame(detail_rows).set_index("Variabel"),
+                use_container_width=True
+            )
             st.caption(
                 f"Prediksi dalam skala Box-Cox (λ={fitted_lambda:.4f}) "
                 f"= {pred_transformed:.4f} → skala kasus asli = {pred}."
@@ -255,16 +278,15 @@ if predict_btn:
         st.altair_chart(
             plot_sarimax_inputs(
                 prev_label, month_name_pred,
-                [last_values["curah_hujan"], curah],
-                [last_values["suhu"],        suhu],
-                [last_values["kelembaban"],  kelembaban],
-                [last_values["kepadatan"],  kepadatan],
+                [input_prev["curah_hujan"], input_curr["curah_hujan"]],
+                [input_prev["suhu"],        input_curr["suhu"]],
+                [input_prev["kelembaban"],  input_curr["kelembaban"]],
             ),
             use_container_width=True
         )
         st.caption(
-            "Grafik menampilkan perubahan variabel iklim dari bulan referensi "
-            "ke bulan prediksi. Differencing dihitung dari selisih kedua nilai tersebut."
+            "Grafik menampilkan perubahan variabel iklim dari bulan t-1 "
+            "ke bulan t. Differencing dihitung dari selisih kedua nilai tersebut."
         )
 
     except Exception as e:
