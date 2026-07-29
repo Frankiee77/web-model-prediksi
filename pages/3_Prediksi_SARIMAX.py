@@ -327,13 +327,22 @@ if predict_btn:
         st.divider()
         st.subheader("📈 Grafik Hasil Prediksi Kasus DBD")
         
-        # nilai kasus terakhir pada dataset
-        last_case = float(df.iloc[-1]["kasus"])
-        
         chart_df = pd.DataFrame({
-            "Periode": [label_t, month_name_pred],
-            "Jumlah Kasus": [last_case, pred],
-            "Tipe": ["Data Aktual", "Prediksi"]
+            "Periode": [
+                label_t1,
+                label_t,
+                month_name_pred
+            ],
+            "Jumlah Kasus": [
+                input_t1["kasus"],
+                input_t["kasus"],
+                pred
+            ],
+            "Tipe": [
+                "Data Aktual",
+                "Data Aktual",
+                "Prediksi"
+            ]
         })
         
         line = (
@@ -342,11 +351,21 @@ if predict_btn:
             .encode(
                 x=alt.X("Periode:N", title="Periode"),
                 y=alt.Y("Jumlah Kasus:Q", title="Jumlah Kasus DBD"),
-                color=alt.Color("Tipe:N"),
-                tooltip=["Periode", "Jumlah Kasus", "Tipe"]
+                color=alt.Color(
+                    "Tipe:N",
+                    scale=alt.Scale(
+                        domain=["Data Aktual", "Prediksi"],
+                        range=["#1f77b4", "#d62728"]
+                    )
+                ),
+                tooltip=[
+                    alt.Tooltip("Periode:N"),
+                    alt.Tooltip("Jumlah Kasus:Q", title="Jumlah Kasus"),
+                    alt.Tooltip("Tipe:N")
+                ]
             )
         )
-
+        
         st.altair_chart(line, use_container_width=True)
 
     except Exception as e:
