@@ -347,7 +347,11 @@ if predict_btn:
         
         line = (
             alt.Chart(chart_df)
-            .mark_line(point=True, strokeWidth=3)
+            .mark_line(
+                point=True
+                strokeWidth=3,
+                strokeDash=[6, 4]
+            )
             .encode(
                 x=alt.X("Periode:N", title="Periode"),
                 y=alt.Y("Jumlah Kasus:Q", title="Jumlah Kasus DBD"),
