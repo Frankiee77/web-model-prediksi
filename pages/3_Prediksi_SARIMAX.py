@@ -10,7 +10,6 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from utils.month_helper import get_previous_months, format_month_year
 from utils.session import init_session_state, add_to_history
 from utils.model_info import get_sarimax_model_info
-from utils.plot import plot_sarimax_inputs
 from utils.loader import load_sarimax, load_dataset
 
 # ==========================================================
