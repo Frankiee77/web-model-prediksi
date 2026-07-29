@@ -72,7 +72,6 @@ st.title("Prediksi DBD dengan Model LSTM")
 
 with st.expander("ℹ️ Informasi Model LSTM", expanded=True):
     model_info = get_lstm_model_info()
-    model_info = get_lstm_model_info()
     st.write(f"**Model:** {model_info['Model']}")
     st.write(f"**Window Input:** {model_info['Window']} bulan")
     st.write(f"**Jumlah Variabel:** {model_info['Jumlah Variabel']}")
@@ -124,8 +123,9 @@ input_rows = []
 
 for i, (y, m) in enumerate(prev_months):
     label = hist_labels[i]
+    t_labels = ["t-2", "t-1", "t"] 
     with st.container(border=True):
-        st.markdown(f"### {label} &nbsp;_(t-{WINDOW_LAG - i})_")
+        st.markdown(f"### {label} &nbsp;_({t-labels})_")
         c1, c2 = st.columns(2)
         with c1:
             kasus = st.number_input(
