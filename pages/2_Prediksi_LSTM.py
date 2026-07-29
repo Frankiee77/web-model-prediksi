@@ -72,12 +72,10 @@ st.title("Prediksi DBD dengan Model LSTM")
 
 with st.expander("ℹ️ Informasi Model LSTM", expanded=True):
     model_info = get_lstm_model_info()
-    c1 = st.columns(1)[0]
-    with c1:
-        st.write(f"**Model:** {model_info['Model']}")
-        st.write(f"**Window Input:** {model_info['Window']} bulan")
-        st.write(f"**Jumlah Variabel:** {model_info['Jumlah Variabel']}")
-
+    model_info = get_lstm_model_info()
+    st.write(f"**Model:** {model_info['Model']}")
+    st.write(f"**Window Input:** {model_info['Window']} bulan")
+    st.write(f"**Jumlah Variabel:** {model_info['Jumlah Variabel']}")
 st.divider()
 
 # ==========================================================
