@@ -1,5 +1,6 @@
 from pathlib import Path
 import pickle
+import pandas as pd
 import streamlit as st
 from tensorflow.keras.models import load_model
 
@@ -40,3 +41,9 @@ def load_sarimax():
         artifacts = pickle.load(f)
 
     return artifacts
+
+@st.cache_resource
+def load_dataset():
+    df = pd.read_excel("dataset.xlsx", sheet_name=0)
+
+    return df
