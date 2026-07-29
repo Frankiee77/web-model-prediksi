@@ -1,13 +1,13 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from datetime import datetime
 
 # Import utilitas
 from utils.month_helper import get_previous_months, format_month_year
 from utils.session import init_session_state, add_to_history
 from utils.model_info import get_lstm_model_info
-from utils.plot import plot_lstm_prediction
 from utils.loader import load_lstm, load_lstm_scaler
 
 # ==========================================================
@@ -205,14 +205,56 @@ if predict_btn:
         # 4. Tambah ke riwayat
         add_to_history("LSTM", month_name_pred, pred)
 
+        import matplotlib.pyplot as plt
+
         # 5. Grafik
         st.divider()
         st.subheader("📊 Visualisasi Prediksi")
+        
         kasus_hist = [row[0] for row in input_rows]
-        st.altair_chart(
-            plot_lstm_prediction(hist_labels, kasus_hist, pred),
-            use_container_width=True
+        
+        fig, ax = plt.subplots(figsize=(8, 5))
+        
+        # -----------------------------
+        # Data historis (3 bulan)
+        # -----------------------------
+        ax.plot(
+            hist_labels,
+            kasus_hist,
+            color="#1f77b4",
+            linewidth=2.5,
+            marker="s",
+            markersize=8,
+            label="Data Historis"
         )
+        
+        # -----------------------------
+        # Prediksi
+        # -----------------------------
+        ax.plot(
+            [hist_labels[-1], "Prediksi"],
+            [kasus_hist[-1], pred],
+            color="#d62728",
+            linewidth=2.5,
+            linestyle="--",
+            marker="o",
+            markersize=12,
+            label="Prediksi"
+        )
+        
+        # -----------------------------
+        # Pengaturan grafik
+        # -----------------------------
+        ax.set_title("Grafik Hasil Prediksi Kasus DBD", fontsize=14, fontweight="bold")
+        ax.set_xlabel("Periode")
+        ax.set_ylabel("Jumlah Kasus DBD")
+        
+        ax.grid(True, axis="y", linestyle="--", alpha=0.4)
+        ax.legend()        
+        plt.tight_layout()        
+        st.pyplot(fig)
+        plt.close(fig)
+        
         st.caption(
             "Grafik menampilkan data historis kasus DBD 3 bulan terakhir "
             "dan hasil prediksi bulan berikutnya menggunakan model LSTM "
