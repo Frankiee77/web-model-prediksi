@@ -316,7 +316,7 @@ if predict_btn:
             )
         )
 
-    st.altair_chart(line, use_container_width=True)
+        st.altair_chart(line, use_container_width=True)
 
     except Exception as e:
         st.error("Prediksi gagal.")
