@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import altair as alt
 from datetime import datetime
 from scipy.special import inv_boxcox
 from statsmodels.tsa.statespace.sarimax import SARIMAX
