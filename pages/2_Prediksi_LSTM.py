@@ -125,7 +125,7 @@ for i, (y, m) in enumerate(prev_months):
     label = hist_labels[i]
     t_labels = ["t-2", "t-1", "t"] 
     with st.container(border=True):
-        st.markdown(f"### {label} &nbsp;_({t-labels})_")
+        st.markdown(f"### {label} &nbsp;_({t_labels})_")
         c1, c2 = st.columns(2)
         with c1:
             kasus = st.number_input(
