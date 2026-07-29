@@ -157,28 +157,23 @@ for y, m, label, t_label in periods:
         with c1:
             kasus = st.number_input(
                 LABEL_VARS["kasus"], min_value=0, step=1,
-                value=int(last_values["kasus"]),
                 key=f"kasus_{y}_{m}"
             )
             curah = st.number_input(
                 LABEL_VARS["curah_hujan"], min_value=0.0, step=1.0,
-                value=last_values["curah_hujan"],
                 key=f"curah_{y}_{m}"
             )
             suhu = st.number_input(
                 LABEL_VARS["suhu"], min_value=0.0, max_value=50.0, step=0.1,
-                value=last_values["suhu"],
                 key=f"suhu_{y}_{m}"
             )
         with c2:
             kelembaban = st.number_input(
                 LABEL_VARS["kelembaban"], min_value=0.0, max_value=100.0, step=0.1,
-                value=last_values["kelembaban"],
                 key=f"kelembaban_{y}_{m}"
             )
             kepadatan = st.number_input(
                 LABEL_VARS["kepadatan"], min_value=0.0, step=1.0,
-                value=last_values["kepadatan"],
                 key=f"kepadatan_{y}_{m}"
             )
         input_data[(y, m)] = {
