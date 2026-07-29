@@ -68,7 +68,7 @@ def hitung_exog_transformed(input_user: dict) -> np.ndarray:
     kelembaban = input_user["kelembaban"]
     kepadatan_diff  = input_user["kepadatan"]   - last_values["kepadatan"]
 
-    return np.array([[curah_diff, suhu_diff, kelembaban], kepadatan])
+    return np.array([[curah_diff, suhu_diff, kelembaban, kepadatan]])
 
 def kategori(nilai: float) -> str:
     if nilai <= 20:
@@ -166,7 +166,7 @@ with col2:
     )
     kepadatan = st.number_input(
         LABEL_VARS["kepadatan"],
-        min_value=0.0, max_value=1000.0, step=10,
+        min_value=0.0, max_value=1000.0, step=10.0,
         value=last_values["kepadatan"],
         help="Kepadatan Penduduk bulan yang ingin diprediksi (jiwa/km2)"
     )
