@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import altair as alt
 from datetime import datetime
 from scipy.special import inv_boxcox
 
@@ -291,6 +292,31 @@ if predict_btn:
             f"ke {label_t} (t). Differencing dihitung dari selisih kedua nilai tersebut "
             f"untuk memprediksi kasus DBD {month_name_pred} (t+1)."
         )
+
+        st.divider()
+        st.subheader("📈 Grafik Hasil Prediksi Kasus DBD")
+        
+        # nilai kasus terakhir pada dataset
+        last_case = float(df.iloc[-1]["kasus"])
+        
+        chart_df = pd.DataFrame({
+            "Periode": [label_t, month_name_pred],
+            "Jumlah Kasus": [last_case, pred],
+            "Tipe": ["Data Aktual", "Prediksi"]
+        })
+        
+        line = (
+            alt.Chart(chart_df)
+            .mark_line(point=True, strokeWidth=3)
+            .encode(
+                x=alt.X("Periode:N", title="Periode"),
+                y=alt.Y("Jumlah Kasus:Q", title="Jumlah Kasus DBD"),
+                color=alt.Color("Tipe:N"),
+                tooltip=["Periode", "Jumlah Kasus", "Tipe"]
+            )
+        )
+
+st.altair_chart(line, use_container_width=True)
 
     except Exception as e:
         st.error("Prediksi gagal.")
