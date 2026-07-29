@@ -1,9 +1,9 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import altair as alt
 from datetime import datetime
 from scipy.special import inv_boxcox
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 # Import utilitas
 from utils.month_helper import get_previous_months, format_month_year
@@ -23,11 +23,16 @@ fitted_lambda = artifacts["fitted_lambda"]
 df       = load_dataset()
 last_row = df.iloc[-1]
 last_values = {
+    "kasus":       float(last_row["kasus"]),
     "curah_hujan": float(last_row["curah_hujan"]),
     "suhu":        float(last_row["suhu"]),
     "kelembaban":  float(last_row["kelembaban"]),
     "kepadatan":   float(last_row["kepadatan"]),
 }
+
+# Parameter model — harus identik dengan saat training
+ORDER          = artifacts.get("order",          (1, 0, 0))
+SEASONAL_ORDER = artifacts.get("seasonal_order", (1, 0, 0, 12))
 
 init_session_state()
 
@@ -35,19 +40,17 @@ init_session_state()
 # KONSTANTA
 # ==========================================================
 
-# Urutan kolom identik dengan saat training:
-# [curah_hujan_diff, suhu_diff, kelembaban_nodiff, kepadatan_diff]
 EXOG_COLS = ["curah_hujan", "suhu", "kelembaban", "kepadatan"]
 
 LABEL_VARS = {
+    "kasus":       "Kasus DBD",
     "curah_hujan": "Curah Hujan (mm)",
     "suhu":        "Suhu (°C)",
     "kelembaban":  "Kelembaban (%)",
     "kepadatan":   "Kepadatan Penduduk (jiwa/km²)",
 }
 
-# Variabel yang di-differencing (t - t-1)
-# Kelembaban tidak di-diff karena sudah stasioner
+# Variabel eksogen yang di-differencing
 DIFF_VARS = ["curah_hujan", "suhu", "kepadatan"]
 
 # ==========================================================
@@ -56,14 +59,8 @@ DIFF_VARS = ["curah_hujan", "suhu", "kepadatan"]
 
 def hitung_exog_transformed(input_t: dict, input_t1: dict) -> np.ndarray:
     """
-    Transformasi input sebelum masuk model SARIMAX.
-
-    Differencing = nilai_t - nilai_t1 (bulan sebelumnya)
-    - curah_hujan : diff(1)
-    - suhu        : diff(1)
-    - kelembaban  : nilai asli (sudah stasioner)
-    - kepadatan   : diff(1)
-
+    Transformasi eksogen sebelum masuk model SARIMAX.
+    Differencing = nilai_t - nilai_t1
     Urutan output: [curah_diff, suhu_diff, kelembaban, kepadatan_diff]
     """
     return np.array([[
@@ -120,7 +117,6 @@ st.write(f"Prediksi untuk: **{month_name_pred}**")
 # t   = satu bulan sebelum bulan prediksi
 # t-1 = dua bulan sebelum bulan prediksi
 prev_2 = get_previous_months(year_pred, month_pred, n=2)
-# prev_2[0] = t-1, prev_2[1] = t
 year_t1, mon_t1 = prev_2[0]   # t-1
 year_t,  mon_t  = prev_2[1]   # t
 
@@ -135,14 +131,15 @@ st.caption(
 st.divider()
 
 # ==========================================================
-# INPUT DATA — 2 BULAN (t-1 dan t)
+# INPUT DATA — 2 BULAN (t-1 dan t), SEMUA VARIABEL
 # ==========================================================
 
-st.subheader("Masukkan Data Variabel Iklim")
+st.subheader("Masukkan Data Historis")
 st.info(
-    "Masukkan nilai variabel iklim untuk 2 bulan berikut. "
-    "Differencing dihitung otomatis dari selisih nilai bulan **t** "
-    "terhadap bulan **t-1**. Kelembaban tidak di-differencing karena sudah stasioner."
+    "Masukkan seluruh nilai variabel untuk 2 bulan berikut. "
+    "Kasus DBD dan kelembaban dimasukkan sebagai nilai asli. "
+    "Curah hujan, suhu, dan kepadatan akan di-differencing "
+    "secara otomatis (nilai t − nilai t-1)."
 )
 
 periods = [
@@ -157,6 +154,11 @@ for y, m, label, t_label in periods:
         st.markdown(f"### {label} &nbsp;_({t_label})_")
         c1, c2 = st.columns(2)
         with c1:
+            kasus = st.number_input(
+                LABEL_VARS["kasus"], min_value=0, step=1,
+                value=int(last_values["kasus"]),
+                key=f"kasus_{y}_{m}"
+            )
             curah = st.number_input(
                 LABEL_VARS["curah_hujan"], min_value=0.0, step=1.0,
                 value=last_values["curah_hujan"],
@@ -179,6 +181,7 @@ for y, m, label, t_label in periods:
                 key=f"kepadatan_{y}_{m}"
             )
         input_data[(y, m)] = {
+            "kasus":       float(kasus),
             "curah_hujan": curah,
             "suhu":        suhu,
             "kelembaban":  kelembaban,
@@ -187,10 +190,11 @@ for y, m, label, t_label in periods:
 
 # Tabel ringkasan
 st.subheader("Ringkasan Input")
+all_vars = ["kasus"] + EXOG_COLS
 summary_rows = []
 for y, m, label, t_label in periods:
     row = {"Bulan": f"{label} ({t_label})"}
-    row.update({LABEL_VARS[v]: input_data[(y, m)][v] for v in EXOG_COLS})
+    row.update({LABEL_VARS[v]: input_data[(y, m)][v] for v in all_vars})
     summary_rows.append(row)
 st.dataframe(
     pd.DataFrame(summary_rows).set_index("Bulan"),
@@ -217,17 +221,53 @@ with center:
 
 if predict_btn:
     try:
-        input_t1 = input_data[(year_t1, mon_t1)]   # bulan t-1
-        input_t  = input_data[(year_t,  mon_t)]    # bulan t
+        input_t1 = input_data[(year_t1, mon_t1)]
+        input_t  = input_data[(year_t,  mon_t)]
 
-        # 1. Hitung differencing: t - t-1
+        # 1. Transformasi Box-Cox pada kasus (endog)
+        #    Kasus bulan t sebagai titik awal endog baru
+        from scipy.stats import boxcox as scipy_boxcox
+        kasus_t_trans = float(
+            inv_boxcox(
+                # Gunakan lambda yang sama dengan training
+                # Box-Cox manual: ((x^lambda) - 1) / lambda
+                (input_t["kasus"] ** fitted_lambda - 1) / fitted_lambda
+                if fitted_lambda != 0
+                else np.log(input_t["kasus"] + 1e-6),
+                fitted_lambda
+            )
+        )
+        # Cara yang benar: transformasi langsung dengan fitted_lambda
+        if fitted_lambda != 0:
+            kasus_t_trans = (input_t["kasus"] ** fitted_lambda - 1) / fitted_lambda
+        else:
+            kasus_t_trans = np.log(max(input_t["kasus"], 1e-6))
+
+        # 2. Hitung differencing eksogen: t - t-1
         exog_transformed = hitung_exog_transformed(input_t, input_t1)
         # shape (1, 4): [curah_diff, suhu_diff, kelembaban, kepadatan_diff]
 
-        # 2. Forecast dalam skala Box-Cox
-        pred_transformed = result.forecast(steps=1, exog=exog_transformed)[0]
+        # 3. Append data baru ke model lalu forecast 1 langkah
+        #    Ini memperbarui state model dengan data bulan t
+        #    sebelum memprediksi t+1
+        result_updated = result.append(
+            endog=[kasus_t_trans],
+            exog=exog_transformed,
+            refit=False
+        )
 
-        # 3. Inverse Box-Cox ke skala kasus asli
+        # 4. Siapkan eksogen untuk langkah prediksi (t+1)
+        #    Untuk t+1 kita tidak punya data aktual eksogen,
+        #    sehingga gunakan nilai t sebagai aproksimasi
+        #    (pengguna bisa mengubah ini jika ada estimasi)
+        exog_next = exog_transformed.copy()
+
+        # 5. Forecast t+1 dalam skala Box-Cox
+        pred_transformed = result_updated.forecast(
+            steps=1, exog=exog_next
+        )[0]
+
+        # 6. Inverse Box-Cox ke skala kasus asli
         pred = float(inv_boxcox(pred_transformed, fitted_lambda))
         pred = round(max(pred, 0))
 
@@ -243,10 +283,19 @@ if predict_btn:
         with c3:
             st.metric("Kategori Risiko", kategori(pred))
 
-        # 4. Detail transformasi
-        with st.expander("🔍 Detail transformasi input (differencing)", expanded=False):
+        # 7. Detail transformasi
+        with st.expander("🔍 Detail transformasi input", expanded=False):
             detail_rows = []
-            for var in EXOG_COLS:
+            # Kasus
+            detail_rows.append({
+                "Variabel":              LABEL_VARS["kasus"],
+                f"Nilai {label_t1} (t-1)": input_t1["kasus"],
+                f"Nilai {label_t} (t)":    input_t["kasus"],
+                "Nilai ke Model":        round(kasus_t_trans, 4),
+                "Transformasi":          f"Box-Cox (λ={fitted_lambda:.4f})",
+            })
+            # Eksogen
+            for i, var in enumerate(EXOG_COLS):
                 v_t1 = input_t1[var]
                 v_t  = input_t[var]
                 if var in DIFF_VARS:
@@ -256,11 +305,11 @@ if predict_btn:
                     nilai_model  = round(v_t, 4)
                     transformasi = "Nilai Asli"
                 detail_rows.append({
-                    "Variabel":       LABEL_VARS[var],
+                    "Variabel":              LABEL_VARS[var],
                     f"Nilai {label_t1} (t-1)": v_t1,
                     f"Nilai {label_t} (t)":    v_t,
-                    "Nilai ke Model": nilai_model,
-                    "Transformasi":   transformasi,
+                    "Nilai ke Model":        nilai_model,
+                    "Transformasi":          transformasi,
                 })
             st.dataframe(
                 pd.DataFrame(detail_rows).set_index("Variabel"),
@@ -271,27 +320,8 @@ if predict_btn:
                 f"= {pred_transformed:.4f} → skala kasus asli = {pred}."
             )
 
-        # 5. Tambah ke riwayat
+        # 8. Tambah ke riwayat
         add_to_history("SARIMAX", month_name_pred, pred)
-
-        # 6. Grafik variabel eksogen
-        st.divider()
-        st.subheader("📊 Visualisasi Input Variabel Iklim")
-        st.altair_chart(
-            plot_sarimax_inputs(
-                label_t1, label_t,
-                [input_t1["curah_hujan"], input_t["curah_hujan"]],
-                [input_t1["suhu"],        input_t["suhu"]],
-                [input_t1["kelembaban"],  input_t["kelembaban"]],
-                [input_t1["kepadatan"],  input_t["kepadatan"]],
-            ),
-            use_container_width=True
-        )
-        st.caption(
-            f"Grafik menampilkan perubahan variabel iklim dari {label_t1} (t-1) "
-            f"ke {label_t} (t). Differencing dihitung dari selisih kedua nilai tersebut "
-            f"untuk memprediksi kasus DBD {month_name_pred} (t+1)."
-        )
 
         st.divider()
         st.subheader("📈 Grafik Hasil Prediksi Kasus DBD")
