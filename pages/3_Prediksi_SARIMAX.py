@@ -328,53 +328,51 @@ if predict_btn:
         st.subheader("📈 Grafik Hasil Prediksi Kasus DBD")
         
         chart_df = pd.DataFrame({
-            "Periode": [
-                label_t1,
-                label_t,
-                month_name_pred
-            ],
+            "Periode": [label_t1, label_t, month_name_pred],
             "Jumlah Kasus": [
                 input_t1["kasus"],
                 input_t["kasus"],
                 pred
-            ],
-            "Tipe": [
-                "Data Aktual",
-                "Data Aktual",
-                "Prediksi"
             ]
         })
+
+        # Data aktual (t-1 -> t)
+        actual_df = chart_df.iloc[:2]
         
-        line = (
-            alt.Chart(chart_df)
+        # Prediksi (t -> t+1)
+        pred_df = chart_df.iloc[1:]
+
+        actual_line = (
+            alt.Chart(actual_df)
             .mark_line(
                 point=True,
                 strokeWidth=3,
-                strokeDash=[6, 4]
+                color="#1f77b4"
             )
             .encode(
-                x=alt.X(
-                    "Periode:N",
-                    title="Periode",
-                    sort=None
-                ),
+                x=alt.X("Periode:N", sort=None, title="Periode"),
                 y=alt.Y("Jumlah Kasus:Q", title="Jumlah Kasus DBD"),
-                color=alt.Color(
-                    "Tipe:N",
-                    scale=alt.Scale(
-                        domain=["Data Aktual", "Prediksi"],
-                        range=["#1f77b4", "#d62728"]
-                    )
-                ),
-                tooltip=[
-                    alt.Tooltip("Periode:N"),
-                    alt.Tooltip("Jumlah Kasus:Q", title="Jumlah Kasus"),
-                    alt.Tooltip("Tipe:N")
-                ]
+                tooltip=["Periode", "Jumlah Kasus"]
             )
         )
-        
-        st.altair_chart(line, use_container_width=True)
+        pred_line = (
+            alt.Chart(pred_df)
+            .mark_line(
+                point=True,
+                strokeWidth=3,
+                strokeDash=[6,4],
+                color="#d62728"
+            )
+            .encode(
+                x=alt.X("Periode:N", sort=None),
+                y="Jumlah Kasus:Q",
+                tooltip=["Periode", "Jumlah Kasus"]
+            )
+        )
+
+        chart = actual_line + pred_line
+
+        st.altair_chart(chart, use_container_width=True)
 
     except Exception as e:
         st.error("Prediksi gagal.")
