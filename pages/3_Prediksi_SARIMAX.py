@@ -282,6 +282,7 @@ if predict_btn:
                 [input_t1["curah_hujan"], input_t["curah_hujan"]],
                 [input_t1["suhu"],        input_t["suhu"]],
                 [input_t1["kelembaban"],  input_t["kelembaban"]],
+                [input_t1["kepadatan"],  input_t["kepadatan"]],
             ),
             use_container_width=True
         )
